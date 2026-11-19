@@ -47,41 +47,49 @@ class SiteHeader extends StatelessWidget implements PreferredSizeWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Official Sage Studio Logo Asset
-              GestureDetector(
-                onTap: () => onNavigate('/'),
-                child: Image.asset(
-                  'assets/images/logo/sage_studio_logo.png',
-                  height: 56,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+              Semantics(
+                button: true,
+                label: 'Sage Studio Home',
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => onNavigate('/'),
+                    child: Image.asset(
+                      'assets/images/logo/sage_studio_logo.png',
+                      height: 56,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Sage Studio',
-                              style: AppTypography.subTitle(color: DesignTokens.textPrimary).copyWith(fontSize: 22),
+                            Row(
+                              children: [
+                                Text(
+                                  'Sage Studio',
+                                  style: AppTypography.subTitle(color: DesignTokens.textPrimary).copyWith(fontSize: 22),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: const BoxDecoration(
+                                    color: DesignTokens.burntOrange,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 6),
-                            Container(
-                              width: 5,
-                              height: 5,
-                              decoration: const BoxDecoration(
-                                color: DesignTokens.burntOrange,
-                                shape: BoxShape.circle,
-                              ),
+                            Text(
+                              'CRAFTED IN KENYA',
+                              style: AppTypography.labelUppercase(color: DesignTokens.oliveAccent).copyWith(fontSize: 9),
                             ),
                           ],
-                        ),
-                        Text(
-                          'CRAFTED IN KENYA',
-                          style: AppTypography.labelUppercase(color: DesignTokens.oliveAccent).copyWith(fontSize: 9),
-                        ),
-                      ],
-                    );
-                  },
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
 
