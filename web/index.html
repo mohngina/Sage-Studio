@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Sage Studio — Furniture Design Studio based in Nairobi, Kenya. Inspired by contemporary African proportions.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Sage Studio">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Sage Studio — Furniture Design Studio | Nairobi, Kenya</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      background-color: #E6E3E2;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #725D24;
+      background-color: #E6E3E2;
+    }
+    .loading-title {
+      font-family: serif;
+      font-size: 28px;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+    }
+    .loading-sub {
+      font-size: 11px;
+      letter-spacing: 2px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading" class="loading-container">
+    <div class="loading-title">SAGE STUDIO</div>
+    <div class="loading-sub">NAIROBI, KENYA</div>
+  </div>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (let name of names) {
+          caches.delete(name);
+        }
+      });
+    }
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
