@@ -31,6 +31,18 @@ class BackendErrors {
       }
       return 'We could not upload that image. Please try again.';
     }
+    if (error is FunctionException) {
+      final details = error.details;
+      if (details is Map) {
+        final msg = details['error'] ?? details['message'];
+        if (msg != null && msg.toString().trim().isNotEmpty) {
+          return msg.toString();
+        }
+      } else if (details is String && details.trim().isNotEmpty) {
+        return details;
+      }
+      return error.reasonPhrase ?? fallback;
+    }
     if (error is AuthException) return 'Your session has expired. Please sign in again.';
     final text = error.toString().toLowerCase();
     if (text.contains('socket') || text.contains('network') || text.contains('failed to fetch')) {

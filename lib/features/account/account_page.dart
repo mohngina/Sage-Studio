@@ -959,7 +959,18 @@ class _OrdersTabState extends State<_OrdersTab> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('PURCHASE HISTORY', style: AppTypography.subTitle()),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('PURCHASE HISTORY', style: AppTypography.subTitle()),
+              TextButton.icon(
+                onPressed: _load,
+                icon: const Icon(Icons.refresh, size: 16, color: DesignTokens.oliveAccent),
+                label: Text('REFRESH',
+                    style: AppTypography.labelUppercase(color: DesignTokens.oliveAccent).copyWith(fontSize: 10)),
+              ),
+            ],
+          ),
           const SizedBox(height: DesignTokens.xs),
           Text(
             'Completed orders with verified payment appear here.',
@@ -991,7 +1002,18 @@ class _OrdersTabState extends State<_OrdersTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('PENDING & UNPAID ORDERS', style: AppTypography.subTitle()),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('PENDING & UNPAID ORDERS', style: AppTypography.subTitle()),
+            TextButton.icon(
+              onPressed: _load,
+              icon: const Icon(Icons.refresh, size: 16, color: DesignTokens.oliveAccent),
+              label: Text('REFRESH',
+                  style: AppTypography.labelUppercase(color: DesignTokens.oliveAccent).copyWith(fontSize: 10)),
+            ),
+          ],
+        ),
         const SizedBox(height: DesignTokens.xs),
         Text(
           'Online payment gateway integration is pending configuration. Orders placed during checkout are saved as Pending (payment not collected) until verified.',

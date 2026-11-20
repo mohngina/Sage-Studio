@@ -209,7 +209,7 @@ class OrderDocxService {
       'fullName': fullName,
       'email': email,
       'phone': phone,
-      'serviceCategory': 'Studio Order ($orderRef)',
+      'serviceCategory': 'Sage Studio Order ($orderRef)',
       'message': messageText,
       'totalKsh': totalKsh,
       'items': items

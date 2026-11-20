@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -60,8 +61,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
   StoreSettings _settings = const StoreSettings();
   CustomerOrder? _createdOrder;
   bool _createdViaDocxOrder = false;
+  bool _tumaPaymentFlow = false;
+  String? _stkStatusMessage;
+  String? _statusCheckNote;
+  Timer? _pollTimer;
+  int _pollAttempts = 0;
   bool _loading = true;
   bool _submitting = false;
+  bool _checkingStatus = false;
   String? _error;
 
   @override
@@ -75,6 +82,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _name.dispose();
     _email.dispose();
     _phone.dispose();
@@ -172,7 +180,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
 
       if (studioItems.isNotEmpty) {
-        final studioTotal = studioItems.fold<double>(0.0, (sum, item) => sum + item.lineTotal);
         await OrderDocxService.processAndDispatchOrder(
           orderRef: order.orderRef,
           fullName: contactName,
@@ -180,23 +187,132 @@ class _CheckoutPageState extends State<CheckoutPage> {
           phone: contactPhone,
           deliveryAddress: deliveryAddress,
           notes: notesText,
-          items: studioItems,
-          totalKsh: studioTotal,
+          items: cartSnapshot,
+          totalKsh: order.totalKsh,
         );
+        cart.clearLocalAfterOrder();
+        if (!mounted) return;
+        setState(() {
+          _submitting = false;
+          _createdOrder = order;
+          _createdViaDocxOrder = true;
+          _tumaPaymentFlow = false;
+        });
+      } else {
+        // Sage Select only: dispatch studio order copy, and trigger
+        // M-Pesa SIM toolkit prompt via Tuma Edge Function.
+        unawaited(OrderDocxService.processAndDispatchOrder(
+          orderRef: order.orderRef,
+          fullName: contactName,
+          email: contactEmail,
+          phone: contactPhone,
+          deliveryAddress: deliveryAddress,
+          notes: notesText,
+          items: cartSnapshot,
+          totalKsh: order.totalKsh,
+        ));
+        cart.clearLocalAfterOrder();
+        setState(() {
+          _createdOrder = order;
+          _createdViaDocxOrder = false;
+          _tumaPaymentFlow = true;
+        });
+        final stkMessage = await _ordersRepo.initiateTumaStkPush(
+          orderId: order.id,
+          phone: contactPhone,
+        );
+        if (!mounted) return;
+        setState(() {
+          _submitting = false;
+          _stkStatusMessage = stkMessage;
+        });
+        _startPaymentPolling(order.id);
       }
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().startsWith('Exception: ')
+          ? e.toString().substring('Exception: '.length)
+          : BackendErrors.message(e, fallback: 'Could not place your order.');
+      setState(() {
+        _submitting = false;
+        _error = msg;
+      });
+    }
+  }
 
-      cart.clearLocalAfterOrder();
+  void _startPaymentPolling(String orderId) {
+    _pollTimer?.cancel();
+    _pollAttempts = 0;
+    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
+      _pollAttempts++;
+      if (_pollAttempts > 30 || !mounted) {
+        _pollTimer?.cancel();
+        return;
+      }
+      await _refreshOrderStatus(orderId);
+    });
+  }
+
+  Future<void> _refreshOrderStatus(String orderId, {bool manual = false}) async {
+    if (manual) {
+      setState(() {
+        _checkingStatus = true;
+        _statusCheckNote = null;
+        _error = null;
+      });
+    }
+    try {
+      final latest = await _ordersRepo.fetchOrder(orderId);
+      if (!mounted) return;
+      setState(() {
+        _createdOrder = latest;
+        _checkingStatus = false;
+        if (manual && latest.status == OrderStatus.pendingPayment) {
+          _statusCheckNote =
+              'Still awaiting confirmation from M-Pesa (checked just now). If you already entered your PIN, wait a few seconds and tap Check Payment Status again.';
+        } else if (latest.isCompletedPurchase || latest.status == OrderStatus.failed) {
+          _statusCheckNote = null;
+        }
+      });
+      if (latest.isCompletedPurchase || latest.status == OrderStatus.failed) {
+        _pollTimer?.cancel();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _checkingStatus = false;
+        if (manual) {
+          _error = BackendErrors.message(e, fallback: 'Could not check payment status.');
+        }
+      });
+    }
+  }
+
+  Future<void> _retryTumaStkPush() async {
+    final order = _createdOrder;
+    if (order == null) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      final msg = await _ordersRepo.initiateTumaStkPush(
+        orderId: order.id,
+        phone: _phone.text.trim(),
+      );
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _createdOrder = order;
-        _createdViaDocxOrder = studioItems.isNotEmpty;
+        _stkStatusMessage = msg;
       });
+      _startPaymentPolling(order.id);
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _error = BackendErrors.message(e, fallback: 'Could not place your order.');
+        _error = e.toString().startsWith('Exception: ')
+            ? e.toString().substring('Exception: '.length)
+            : BackendErrors.message(e, fallback: 'Could not resend payment prompt.');
       });
     }
   }
@@ -228,6 +344,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   );
                 }
                 if (_createdOrder != null) {
+                  if (_tumaPaymentFlow) {
+                    return _TumaPaymentStatusView(
+                      order: _createdOrder!,
+                      stkMessage: _stkStatusMessage,
+                      statusNote: _statusCheckNote,
+                      error: _error,
+                      busy: _submitting,
+                      checking: _checkingStatus,
+                      onCheckStatus: () => _refreshOrderStatus(_createdOrder!.id, manual: true),
+                      onRetry: _retryTumaStkPush,
+                      onNavigate: widget.onNavigate,
+                    );
+                  }
                   return _PendingOrderConfirmation(
                     order: _createdOrder!,
                     sentToStudio: _createdViaDocxOrder,
@@ -258,14 +387,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     ),
                     const SizedBox(height: DesignTokens.md),
                     Text('CHECKOUT', style: AppTypography.sectionTitle()),
-                    if (!hasStudioItems) ...[
-                      const SizedBox(height: DesignTokens.sm),
-                      const SageNotice(
-                        type: SageNoticeType.warning,
-                        message:
-                            'Test / Pending Checkout Mode: An online payment provider for Sage Select has not been enabled yet. Confirming below records a PENDING order request — no payment is collected online.',
-                      ),
-                    ],
                     const SizedBox(height: DesignTokens.xl),
                     ResponsiveLayout(
                       mobile: Column(
@@ -404,10 +525,43 @@ class _CheckoutPageState extends State<CheckoutPage> {
             const SizedBox(height: DesignTokens.lg),
             SageNotice(type: SageNoticeType.error, message: _error!),
           ],
-          const SizedBox(height: DesignTokens.xl),
+          if (!hasStudioItems) ...[
+            const SizedBox(height: DesignTokens.xl),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: DesignTokens.md, vertical: DesignTokens.md),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7F5F2),
+                border: Border.all(color: DesignTokens.borderLight),
+              ),
+              child: Row(
+                children: [
+                  Image.asset(
+                    'assets/images/logo/mpesa_logo.png',
+                    height: 26,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.phone_android,
+                      size: 22,
+                      color: DesignTokens.oliveAccent,
+                    ),
+                  ),
+                  const SizedBox(width: DesignTokens.md),
+                  Expanded(
+                    child: Text(
+                      'Payment is via M-Pesa only. A SIM toolkit prompt will be sent to your phone number above.',
+                      style: AppTypography.bodySmall(color: DesignTokens.textPrimary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DesignTokens.md),
+          ] else
+            const SizedBox(height: DesignTokens.xl),
           SageBusyButton(
-            text: hasStudioItems ? 'PLACE ORDER' : 'PLACE PENDING ORDER (NO PAYMENT COLLECTED)',
-            busyText: 'SUBMITTING ORDER…',
+            text: hasStudioItems ? 'PLACE ORDER' : 'MAKE PAYMENT',
+            busyText: hasStudioItems ? 'SUBMITTING ORDER…' : 'SENDING PROMPT…',
             busy: _submitting,
             onTap: _submitPendingOrder,
           ),
@@ -568,6 +722,123 @@ class _PendingOrderConfirmation extends StatelessWidget {
                   style: SageButtonStyle.primary,
                   onTap: () => onNavigate('/shop'),
                 ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TumaPaymentStatusView extends StatelessWidget {
+  final CustomerOrder order;
+  final String? stkMessage;
+  final String? statusNote;
+  final String? error;
+  final bool busy;
+  final bool checking;
+  final VoidCallback onCheckStatus;
+  final VoidCallback onRetry;
+  final Function(String) onNavigate;
+
+  const _TumaPaymentStatusView({
+    required this.order,
+    required this.stkMessage,
+    this.statusNote,
+    required this.error,
+    required this.busy,
+    this.checking = false,
+    required this.onCheckStatus,
+    required this.onRetry,
+    required this.onNavigate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPaid = order.isCompletedPurchase;
+    final isFailed = order.status == OrderStatus.failed;
+    final badgeColor =
+        isPaid ? DesignTokens.oliveAccent : (isFailed ? DesignTokens.galleryAccent : DesignTokens.burntOrange);
+    final badgeText = isPaid ? 'PAYMENT CONFIRMED' : (isFailed ? 'PAYMENT FAILED' : 'AWAITING M-PESA PIN');
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 680),
+      child: Container(
+        padding: const EdgeInsets.all(DesignTokens.xxl),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: DesignTokens.borderLight),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              color: badgeColor.withValues(alpha: 0.12),
+              child: Text(
+                badgeText,
+                style: AppTypography.labelUppercase(color: badgeColor).copyWith(fontSize: 10),
+              ),
+            ),
+            const SizedBox(height: DesignTokens.md),
+            Text(
+              isPaid
+                  ? 'Thank you — payment received'
+                  : (isFailed ? 'Payment was not completed' : 'Check your phone to pay'),
+              style: AppTypography.sectionTitle(),
+            ),
+            const SizedBox(height: DesignTokens.sm),
+            Text(
+              'Reference: ${order.orderRef} • Total: ${formatKsh(order.totalKsh)}',
+              style: AppTypography.cardTitle(color: DesignTokens.oliveAccent),
+            ),
+            const SizedBox(height: DesignTokens.md),
+            Text(
+              isPaid
+                  ? 'Your payment has been verified and your order is now recorded in your Purchase History.'
+                  : (isFailed
+                      ? 'The M-Pesa prompt was cancelled or timed out. You can resend the SIM toolkit prompt below.'
+                      : (stkMessage ??
+                          'A SIM toolkit prompt has been sent to your phone. Enter your M-Pesa PIN to complete payment.')),
+              style: AppTypography.bodyMedium(color: DesignTokens.textPrimary),
+            ),
+            if (statusNote != null) ...[
+              const SizedBox(height: DesignTokens.md),
+              SageNotice(type: SageNoticeType.info, message: statusNote!),
+            ],
+            if (error != null) ...[
+              const SizedBox(height: DesignTokens.md),
+              SageNotice(type: SageNoticeType.error, message: error!),
+            ],
+            const SizedBox(height: DesignTokens.xl),
+            Wrap(
+              spacing: DesignTokens.md,
+              runSpacing: DesignTokens.sm,
+              children: [
+                if (isPaid)
+                  SageButton(
+                    text: 'VIEW PURCHASE HISTORY',
+                    style: SageButtonStyle.primary,
+                    onTap: () => onNavigate('/account?tab=history'),
+                  )
+                else ...[
+                  SageButton(
+                    text: checking ? 'CHECKING…' : 'CHECK PAYMENT STATUS',
+                    style: SageButtonStyle.primary,
+                    onTap: checking ? () {} : onCheckStatus,
+                  ),
+                  SageButton(
+                    text: busy ? 'SENDING…' : 'RESEND STK PROMPT',
+                    style: SageButtonStyle.secondary,
+                    onTap: busy ? () {} : onRetry,
+                  ),
+                  SageButton(
+                    text: 'VIEW PENDING ORDERS',
+                    style: SageButtonStyle.primary,
+                    onTap: () => onNavigate('/account?tab=pending'),
+                  ),
+                ],
               ],
             ),
           ],

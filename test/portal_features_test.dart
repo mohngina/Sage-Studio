@@ -261,7 +261,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('CheckoutPage keeps pending checkout button when cart only contains Sage Select items', (tester) async {
+    testWidgets('CheckoutPage shows M-Pesa notice and MAKE PAYMENT button for Sage Select-only cart', (tester) async {
       tester.view.physicalSize = const Size(1440, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -277,8 +277,30 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Test / Pending Checkout Mode'), findsOneWidget);
-      expect(find.text('PLACE PENDING ORDER (NO PAYMENT COLLECTED)'), findsOneWidget);
+      expect(find.textContaining('Payment is via M-Pesa only'), findsOneWidget);
+      expect(find.text('MAKE PAYMENT'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('CheckoutPage keeps Place Order when cart mixes studio clan and Sage Select items', (tester) async {
+      tester.view.physicalSize = const Size(1440, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      AuthService.instance.debugSetState(status: AuthStatus.signedIn, user: _fakeUser());
+      CartController.instance.addToCart(ProductData.bosibori3Seater, quantity: 1);
+      CartController.instance.addToCart(
+        ProductData.sageSelectPillowBrownDiamond.withPillowOption('Cover & Insert'),
+        quantity: 1,
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(body: CheckoutPage(onNavigate: (_) {})),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('PLACE ORDER'), findsOneWidget);
+      expect(find.text('MAKE PAYMENT'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 

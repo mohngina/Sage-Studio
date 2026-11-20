@@ -377,4 +377,26 @@ class OrdersRepository {
     _uid();
     await _db.rpc('cancel_pending_order', params: {'p_order_id': orderId});
   }
+
+  /// Triggers an M-Pesa STK Push via the server-side `tuma-stk-push` Edge
+  /// Function. Never sends API keys or trusted totals from the browser.
+  Future<String> initiateTumaStkPush({
+    required String orderId,
+    required String phone,
+  }) async {
+    await _requireUid();
+    final res = await _db.functions.invoke(
+      'tuma-stk-push',
+      body: {'order_id': orderId, 'phone': phone},
+    );
+    final data = res.data;
+    if (res.status >= 400 || (data is Map && data['error'] != null)) {
+      final msg = (data is Map ? data['error']?.toString() : null) ?? 'Could not send SIM toolkit payment prompt.';
+      throw Exception(msg);
+    }
+    if (data is Map && data['customer_message'] != null) {
+      return data['customer_message'].toString();
+    }
+    return 'SIM toolkit prompt sent. Please enter your M-Pesa PIN on your phone.';
+  }
 }

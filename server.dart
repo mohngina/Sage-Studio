@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
@@ -39,6 +40,8 @@ void main() async {
   if (!await enquiriesDir.exists()) {
     await enquiriesDir.create(recursive: true);
   }
+  final buildDirCanonical = await buildDir.resolveSymbolicLinks();
+  final enquiriesDirCanonical = await enquiriesDir.resolveSymbolicLinks();
 
   final server = await HttpServer.bind(InternetAddress.anyIPv4, 8080);
   stdout.writeln('====================================================');
@@ -49,10 +52,13 @@ void main() async {
   stdout.writeln('====================================================');
 
   await for (HttpRequest request in server) {
-    // Add CORS and no-cache headers for web requests
+    // Add CORS, security, and no-cache headers for web requests
     request.response.headers.add('Access-Control-Allow-Origin', '*');
     request.response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     request.response.headers.add('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization');
+    request.response.headers.add('X-Content-Type-Options', 'nosniff');
+    request.response.headers.add('X-Frame-Options', 'DENY');
+    request.response.headers.add('Referrer-Policy', 'strict-origin-when-cross-origin');
     request.response.headers.add('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     request.response.headers.add('Pragma', 'no-cache');
     request.response.headers.add('Expires', '0');
@@ -87,45 +93,89 @@ self.addEventListener('activate', function(e) {
     // Backend API Route: Automatic Enquiry Processing & Dispatch
     if ((request.uri.path == '/api/send-enquiry' || request.uri.path == '/api/send-order') &&
         request.method == 'POST') {
-      await _handleSendEnquiry(request, enquiriesDir);
+      await _handleSendEnquiry(request, enquiriesDirCanonical);
       continue;
     }
 
-    // Static Web File Routing
-    var path = request.uri.path;
-    if (path == '/' || path.isEmpty) {
-      path = '/index.html';
-    }
-
-    final file = File('build/web$path');
-    if (await file.exists()) {
-      final mimeType = _getMimeType(path);
+    // Static Web File Routing (with path-traversal containment)
+    final file = await _resolveStaticFile(request.uri.path, buildDirCanonical);
+    if (file != null && await file.exists()) {
+      final mimeType = _getMimeType(file.path);
       request.response.headers.contentType = ContentType.parse(mimeType);
       await file.openRead().pipe(request.response);
     } else {
       // Fallback to index.html for single-page app routing
-      final indexFile = File('build/web/index.html');
+      final indexFile = File('$buildDirCanonical${Platform.pathSeparator}index.html');
       request.response.headers.contentType = ContentType.html;
       await indexFile.openRead().pipe(request.response);
     }
   }
 }
 
-Future<void> _handleSendEnquiry(HttpRequest request, Directory enquiriesDir) async {
+const int _kMaxRequestBodyBytes = 10 * 1024 * 1024; // 10 MB
+
+Future<String> _readBodyWithLimit(HttpRequest request) async {
+  final builder = BytesBuilder(copy: false);
+  var total = 0;
+  await for (final chunk in request) {
+    total += chunk.length;
+    if (total > _kMaxRequestBodyBytes) {
+      throw const HttpException('Payload too large');
+    }
+    builder.add(chunk);
+  }
+  return utf8.decode(builder.takeBytes());
+}
+
+Future<File?> _resolveStaticFile(String rawPath, String buildDirCanonical) async {
+  final normalized = Uri(path: rawPath.isEmpty || rawPath == '/' ? '/index.html' : rawPath).normalizePath().path;
+  if (normalized.contains('..') || normalized.contains('\\')) return null;
+  final segments = normalized.split('/').where((s) => s.isNotEmpty).toList();
+  if (segments.isEmpty || segments.any((s) => s.startsWith('.') || s == '..')) return null;
+  final candidate = File('$buildDirCanonical${Platform.pathSeparator}${segments.join(Platform.pathSeparator)}');
+  if (!await candidate.exists()) return null;
+  final resolved = await candidate.resolveSymbolicLinks();
+  if (!resolved.startsWith('$buildDirCanonical${Platform.pathSeparator}')) return null;
+  return File(resolved);
+}
+
+String _sanitizeDocxFileName(String? raw) {
+  final base = (raw ?? '').split(RegExp(r'[/\\]')).last.trim();
+  var cleaned = base.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+  if (cleaned.isEmpty || cleaned.startsWith('.')) {
+    return 'Sage_Studio_Enquiry.docx';
+  }
+  if (!cleaned.toLowerCase().endsWith('.docx')) {
+    cleaned = '$cleaned.docx';
+  }
+  return cleaned.length > 120 ? '${cleaned.substring(0, 115)}.docx' : cleaned;
+}
+
+String _escapeHtml(String value) => value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
+String _stripHeaderNewlines(String value) => value.replaceAll(RegExp(r'[\r\n]+'), ' ').trim();
+
+Future<void> _handleSendEnquiry(HttpRequest request, String enquiriesDirCanonical) async {
   try {
-    final bodyString = await utf8.decoder.bind(request).join();
+    final bodyString = await _readBodyWithLimit(request);
     final data = jsonDecode(bodyString) as Map<String, dynamic>;
 
-    final recipientEmail = (data['recipientEmail'] as String?)?.trim().isNotEmpty == true
-        ? data['recipientEmail'] as String
-        : kSageStudioEmail;
+    // Always dispatch to the studio's own address; never act as an open relay.
+    const recipientEmail = kSageStudioEmail;
     final fullName = data['fullName'] as String? ?? 'Anonymous Client';
     final email = data['email'] as String? ?? 'Not provided';
     final phone = data['phone'] as String? ?? 'Not provided';
     final serviceCategory = data['serviceCategory'] as String? ?? 'General Enquiry';
     final message = data['message'] as String? ?? '';
-    final fileName = data['fileName'] as String? ?? 'Sage_Studio_Enquiry.docx';
+    final fileName = _sanitizeDocxFileName(data['fileName'] as String?);
     final docxBase64 = data['docxBase64'] as String?;
+    final orderRef = (data['orderRef'] as String?)?.trim();
+    final isOrder = orderRef != null && orderRef.isNotEmpty;
 
     stdout.writeln('\n[ENQUIRY RECEIVED]');
     stdout.writeln('Client: $fullName ($email)');
@@ -137,13 +187,14 @@ Future<void> _handleSendEnquiry(HttpRequest request, Directory enquiriesDir) asy
     List<int>? docxBytes;
     if (docxBase64 != null && docxBase64.isNotEmpty) {
       docxBytes = base64Decode(docxBase64);
-      savedDocxFile = File('${enquiriesDir.path}/$fileName');
+      savedDocxFile = File('$enquiriesDirCanonical${Platform.pathSeparator}$fileName');
       await savedDocxFile.writeAsBytes(docxBytes);
       stdout.writeln('[ARCHIVED .DOCX] Saved to: ${savedDocxFile.path} (${docxBytes.length} bytes)');
     }
 
     // 2. Save JSON summary record
-    final summaryFile = File('${enquiriesDir.path}/${fileName.replaceAll('.docx', '.json')}');
+    final summaryName = '${fileName.substring(0, fileName.length - 5)}.json';
+    final summaryFile = File('$enquiriesDirCanonical${Platform.pathSeparator}$summaryName');
     await summaryFile.writeAsString(const JsonEncoder.withIndent('  ').convert({
       'recipient': recipientEmail,
       'fullName': fullName,
@@ -168,6 +219,7 @@ Future<void> _handleSendEnquiry(HttpRequest request, Directory enquiriesDir) asy
       docxFile: savedDocxFile,
       docxBytes: docxBytes,
       docxBase64: docxBase64,
+      isOrder: isOrder,
     );
 
     request.response.statusCode = HttpStatus.ok;
@@ -179,13 +231,21 @@ Future<void> _handleSendEnquiry(HttpRequest request, Directory enquiriesDir) asy
       'dispatched': dispatched,
     }));
     await request.response.close();
+  } on HttpException {
+    request.response.statusCode = HttpStatus.requestEntityTooLarge;
+    request.response.headers.contentType = ContentType.json;
+    request.response.write(jsonEncode({
+      'success': false,
+      'error': 'Request payload exceeds maximum allowed size.',
+    }));
+    await request.response.close();
   } catch (e, stack) {
     stderr.writeln('Error processing enquiry: $e\n$stack');
     request.response.statusCode = HttpStatus.internalServerError;
     request.response.headers.contentType = ContentType.json;
     request.response.write(jsonEncode({
       'success': false,
-      'error': e.toString(),
+      'error': 'Unable to process enquiry.',
     }));
     await request.response.close();
   }
@@ -204,18 +264,33 @@ Future<bool> _dispatchEmailWithDocx({
   required File? docxFile,
   required List<int>? docxBytes,
   required String? docxBase64,
+  bool isOrder = false,
 }) async {
   final env = _loadEnv();
 
+  final safeSubject = _stripHeaderNewlines(
+    isOrder ? '$serviceCategory — $clientName' : 'New Project Enquiry: $serviceCategory — $clientName',
+  );
+  final emailSubject = safeSubject;
+  final safeReplyEmail = _stripHeaderNewlines(clientEmail);
+  final safeReplyName = _stripHeaderNewlines(clientName);
+
+  final escapedName = _escapeHtml(clientName);
+  final escapedEmail = _escapeHtml(clientEmail);
+  final escapedPhone = _escapeHtml(clientPhone.isEmpty ? 'Not provided' : clientPhone);
+  final escapedCategory = _escapeHtml(serviceCategory);
+  final escapedMessage = _escapeHtml(message.isEmpty ? 'No additional message provided.' : message).replaceAll('\n', '<br>');
+  final escapedFileName = _escapeHtml(fileName);
+
   final htmlBody = '''
-<h2>New Project Enquiry — Sage Studio</h2>
-<p><strong>Client Name:</strong> $clientName</p>
-<p><strong>Client Email:</strong> $clientEmail</p>
-<p><strong>Phone Number:</strong> ${clientPhone.isEmpty ? "Not provided" : clientPhone}</p>
-<p><strong>Service / Category:</strong> $serviceCategory</p>
-<p><strong>Project Details / Message:</strong><br>${message.isEmpty ? "No additional message provided." : message}</p>
+<h2>${isOrder ? 'Sage Studio Order' : 'New Project Enquiry — Sage Studio'}</h2>
+<p><strong>Client Name:</strong> $escapedName</p>
+<p><strong>Client Email:</strong> $escapedEmail</p>
+<p><strong>Phone Number:</strong> $escapedPhone</p>
+<p><strong>${isOrder ? 'Order' : 'Service / Category'}:</strong> $escapedCategory</p>
+<p><strong>${isOrder ? 'Order Details' : 'Project Details / Message'}:</strong><br>$escapedMessage</p>
 <hr>
-<p><em>The generated Microsoft Word (.docx) enquiry document ($fileName) is attached to this email.</em></p>
+<p><em>The generated Microsoft Word (.docx) ${isOrder ? 'order' : 'enquiry'} document ($escapedFileName) is attached to this email.</em></p>
 ''';
 
   // 1. Primary: Flutter/Dart `mailer` package via SMTP (Gmail or custom SMTP)
@@ -231,13 +306,13 @@ Future<bool> _dispatchEmailWithDocx({
           : gmail(smtpUser, smtpPass);
 
       final mailMessage = Message()
-        ..from = Address(smtpUser, 'Sage Studio Website')
+        ..from = Address(smtpUser, 'Sage Studio')
         ..recipients.add(recipientEmail)
-        ..headers['Reply-To'] = clientEmail.contains('@') ? '$clientName <$clientEmail>' : kSageStudioEmail
-        ..subject = 'New Project Enquiry: $serviceCategory — $clientName'
-        ..text = 'New Project Enquiry from $clientName ($clientEmail, $clientPhone).\n'
-            'Service: $serviceCategory\n'
-            'Message: $message\n\n'
+        ..headers['Reply-To'] = safeReplyEmail.contains('@') ? '$safeReplyName <$safeReplyEmail>' : kSageStudioEmail
+        ..subject = emailSubject
+        ..text = '${isOrder ? "Sage Studio Order" : "New Project Enquiry"} from $clientName ($clientEmail, $clientPhone).\n'
+            '${isOrder ? "Order" : "Service"}: $serviceCategory\n'
+            'Details: $message\n\n'
             'Please find the generated Word document ($fileName) attached.'
         ..html = htmlBody;
 
@@ -271,9 +346,11 @@ Future<bool> _dispatchEmailWithDocx({
         },
         body: jsonEncode({
           'from': 'Sage Studio <onboarding@resend.dev>',
-          'to': [recipientEmail],
+          'to': [
+            recipientEmail,
+          ],
           'reply_to': clientEmail,
-          'subject': 'New Project Enquiry: $serviceCategory — $clientName',
+          'subject': emailSubject,
           'html': htmlBody,
           if (docxBase64 != null)
             'attachments': [
@@ -303,10 +380,10 @@ Future<bool> _dispatchEmailWithDocx({
         body: jsonEncode({
           'sender': {'name': 'Sage Studio', 'email': kSageStudioEmail},
           'to': [
-            {'email': recipientEmail, 'name': 'Sage Studio'}
+            {'email': recipientEmail, 'name': 'Sage Studio'},
           ],
           'replyTo': {'email': clientEmail, 'name': clientName},
-          'subject': 'New Project Enquiry: $serviceCategory — $clientName',
+          'subject': emailSubject,
           'htmlContent': htmlBody,
           if (docxBase64 != null)
             'attachment': [
@@ -332,7 +409,7 @@ Future<bool> _dispatchEmailWithDocx({
       );
       multipartReq.headers['Referer'] = 'http://localhost:8080/contact';
       multipartReq.headers['Origin'] = 'http://localhost:8080';
-      multipartReq.fields['_subject'] = 'New Project Enquiry: $serviceCategory — $clientName';
+      multipartReq.fields['_subject'] = emailSubject;
       multipartReq.fields['_captcha'] = 'false';
       multipartReq.fields['_template'] = 'table';
       multipartReq.fields['Client_Name'] = clientName;
