@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:archive/archive.dart';
-import 'package:http/http.dart' as http;
+import 'enquiry_dispatch_helper.dart';
 
 class EnquiryDocxService {
   static const String recipientEmail = 'sagestudio.ke@gmail.com';
@@ -270,34 +270,6 @@ class EnquiryDocxService {
     });
 
     // 3. Send automatically via HTTP POST to backend API (no user download)
-    final endpoints = <String>[
-      'http://localhost:8080/api/send-enquiry',
-      '/api/send-enquiry',
-    ];
-
-    bool dispatched = false;
-    for (final endpoint in endpoints) {
-      try {
-        final response = await http
-            .post(
-              Uri.parse(endpoint),
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              },
-              body: payload,
-            )
-            .timeout(const Duration(seconds: 15));
-
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          dispatched = true;
-          break;
-        }
-      } catch (_) {
-        // Try next endpoint
-      }
-    }
-
-    return dispatched;
+    return EnquiryDispatchHelper.dispatch(payload);
   }
 }

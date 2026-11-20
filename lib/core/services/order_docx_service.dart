@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:archive/archive.dart';
-import 'package:http/http.dart' as http;
 
+import 'enquiry_dispatch_helper.dart';
 import '../../models/portal_models.dart';
 import '../features_helpers.dart' show isSageSelectProduct;
 import '../../features/shop/cart_controller.dart';
@@ -229,35 +229,6 @@ class OrderDocxService {
       'submittedAt': now.toIso8601String(),
     });
 
-    final endpoints = <String>[
-      'http://localhost:8080/api/send-enquiry',
-      '/api/send-enquiry',
-    ];
-
-    for (final endpoint in endpoints) {
-      try {
-        final response = await http
-            .post(
-              Uri.parse(endpoint),
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              },
-              body: payload,
-            )
-            .timeout(const Duration(seconds: 15));
-
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          final decoded = jsonDecode(response.body);
-          if (decoded is Map && decoded['success'] == true) {
-            return true;
-          }
-        }
-      } catch (_) {
-        // Try next endpoint
-      }
-    }
-
-    return false;
+    return EnquiryDispatchHelper.dispatch(payload);
   }
 }
