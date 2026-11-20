@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routing/app_router.dart';
 import 'core/services/auth_service.dart';
@@ -18,11 +20,22 @@ class _SageStudioAppState extends State<SageStudioApp> {
     setState(() {
       _currentRoute = route;
     });
+    SystemNavigator.routeInformationUpdated(uri: Uri.parse(route));
   }
 
   @override
   void initState() {
     super.initState();
+    if (kIsWeb) {
+      final initialPath = Uri.base.path;
+      if (initialPath.isNotEmpty &&
+          initialPath != '/' &&
+          !initialPath.endsWith('.html')) {
+        _currentRoute = Uri.base.hasQuery
+            ? '$initialPath?${Uri.base.query}'
+            : initialPath;
+      }
+    }
     // Auth events (OAuth return, password-recovery links) can request a route.
     AuthService.instance.pendingNavigation.addListener(_onPendingNavigation);
     _onPendingNavigation();

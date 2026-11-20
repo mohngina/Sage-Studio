@@ -63,4 +63,6 @@ enquiries/
 tmp_drive/
 supabase/.temp/
 supabase/.branches/
+sage_studio_web.zip
+sage_studio_web.tar.gz
 
