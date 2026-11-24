@@ -44,6 +44,7 @@ void main() async {
   final enquiriesDirCanonical = await enquiriesDir.resolveSymbolicLinks();
 
   final server = await HttpServer.bind(InternetAddress.anyIPv4, 8080);
+  server.autoCompress = true;
   stdout.writeln('====================================================');
   stdout.writeln('Sage Studio Web & Backend API Server Live');
   stdout.writeln('Local URL: http://localhost:8080');
@@ -52,16 +53,23 @@ void main() async {
   stdout.writeln('====================================================');
 
   await for (HttpRequest request in server) {
-    // Add CORS, security, and no-cache headers for web requests
+    // Add CORS and security headers; cache heavy static assets/canvaskit while
+    // keeping entrypoints & API responses uncached so updates appear immediately.
     request.response.headers.add('Access-Control-Allow-Origin', '*');
     request.response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     request.response.headers.add('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization');
     request.response.headers.add('X-Content-Type-Options', 'nosniff');
     request.response.headers.add('X-Frame-Options', 'DENY');
     request.response.headers.add('Referrer-Policy', 'strict-origin-when-cross-origin');
-    request.response.headers.add('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-    request.response.headers.add('Pragma', 'no-cache');
-    request.response.headers.add('Expires', '0');
+    final reqPath = request.uri.path;
+    final isCacheableAsset = reqPath.startsWith('/assets/') || reqPath.startsWith('/canvaskit/');
+    if (isCacheableAsset) {
+      request.response.headers.add('Cache-Control', 'public, max-age=86400');
+    } else {
+      request.response.headers.add('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      request.response.headers.add('Pragma', 'no-cache');
+      request.response.headers.add('Expires', '0');
+    }
 
     if (request.method == 'OPTIONS') {
       request.response.statusCode = HttpStatus.ok;

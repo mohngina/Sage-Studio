@@ -13,7 +13,7 @@ Future<void> main() async {
   // sign-in hook is registered, and ensure customer profile exists on sign-in.
   FavouritesController.instance;
   AuthService.instance.addSignInHook((_) => ProfileRepository().fetchOrCreate());
-  await AuthService.instance.initialise();
-  await CartController.instance.initialise();
   runApp(const SageStudioApp());
+  // Initialise auth & cart after first frame so the UI renders immediately.
+  AuthService.instance.initialise().then((_) => CartController.instance.initialise());
 }
