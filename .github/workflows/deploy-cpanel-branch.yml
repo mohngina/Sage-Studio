@@ -36,13 +36,28 @@ jobs:
             cp web/.htaccess build/web/.htaccess
           fi
 
-      - name: Push build/web to deploy branch
-        working-directory: build/web
+      - name: Commit and push build/web to deploy branch (fast-forward)
         run: |
-          git init
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B deploy
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+
+          rm -rf /tmp/deploy-repo
+          if git ls-remote --exit-code --heads "$REPO_URL" deploy >/dev/null 2>&1; then
+            git clone --branch deploy --single-branch "$REPO_URL" /tmp/deploy-repo
+            find /tmp/deploy-repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          else
+            git init /tmp/deploy-repo
+            git -C /tmp/deploy-repo checkout -B deploy
+            git -C /tmp/deploy-repo remote add origin "$REPO_URL"
+          fi
+
+          cp -a build/web/. /tmp/deploy-repo/
+          cd /tmp/deploy-repo
           git add -A
-          git commit -m "Deploy build from ${{ github.sha }}"
-          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" deploy
+          if git diff --cached --quiet; then
+            echo "No changes to deploy."
+          else
+            git commit -m "Deploy build from ${{ github.sha }}"
+            git push origin deploy
+          fi
