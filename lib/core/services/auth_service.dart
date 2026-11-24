@@ -70,12 +70,19 @@ class AuthService extends ChangeNotifier {
     }
     _status = AuthStatus.initialising;
     try {
-      await Supabase.initialize(
-        url: SupabaseConfig.url,
-        publishableKey: SupabaseConfig.anonKey,
-        authOptions: const FlutterAuthClientOptions(authFlowType: AuthFlowType.pkce),
-        debug: false,
-      );
+      var alreadyInitialised = false;
+      try {
+        Supabase.instance.client;
+        alreadyInitialised = true;
+      } catch (_) {}
+      if (!alreadyInitialised) {
+        await Supabase.initialize(
+          url: SupabaseConfig.url,
+          publishableKey: SupabaseConfig.anonKey,
+          authOptions: const FlutterAuthClientOptions(authFlowType: AuthFlowType.pkce),
+          debug: false,
+        );
+      }
       _clientInitialised = true;
       _user = _auth.currentUser;
       _status = _user != null ? AuthStatus.signedIn : AuthStatus.signedOut;
