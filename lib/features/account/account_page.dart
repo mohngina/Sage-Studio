@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/responsive/breakpoints.dart';
+import '../../core/routing/app_router.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/backend_errors.dart';
 import '../../core/services/catalogue_lookup.dart';
@@ -64,7 +65,10 @@ class _AccountPageState extends State<AccountPage> {
     }
   }
 
-  void _selectTab(AccountTab tab) => setState(() => _tab = tab);
+  void _selectTab(AccountTab tab) {
+    setState(() => _tab = tab);
+    widget.onNavigate(AppRouter.accountTabRoute(tab));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +90,7 @@ class _AccountPageState extends State<AccountPage> {
                 if (!auth.isSignedIn) {
                   return SignInRequiredView(
                     onNavigate: widget.onNavigate,
-                    returnRoute: widget.initialTab == null ? '/account' : '/account?tab=${widget.initialTab}',
+                    returnRoute: _tab == AccountTab.profile ? '/account' : AppRouter.accountTabRoute(_tab),
                     message: 'Sign in to manage your profile, cart, favourites, reviews and orders.',
                   );
                 }
@@ -646,29 +650,32 @@ class _CartTab extends StatelessWidget {
                     spacing: DesignTokens.lg,
                     runSpacing: DesignTokens.md,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset(
-                            item.product.mainImage,
-                            width: 84,
-                            height: 84,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                Container(width: 84, height: 84, color: DesignTokens.softBackground),
-                          ),
-                          const SizedBox(width: DesignTokens.md),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item.product.title, style: AppTypography.cardTitle()),
-                              Text(item.product.subtitle,
-                                  style: AppTypography.bodySmall(color: DesignTokens.oliveAccent)),
-                              const SizedBox(height: 4),
-                              Text('Unit: ${formatKsh(item.product.priceKsh)}', style: AppTypography.bodySmall()),
-                            ],
-                          ),
-                        ],
+                      GestureDetector(
+                        onTap: () => onNavigate(AppRouter.productRoute(item.product)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              item.product.mainImage,
+                              width: 84,
+                              height: 84,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  Container(width: 84, height: 84, color: DesignTokens.softBackground),
+                            ),
+                            const SizedBox(width: DesignTokens.md),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.product.title, style: AppTypography.cardTitle()),
+                                Text(item.product.subtitle,
+                                    style: AppTypography.bodySmall(color: DesignTokens.oliveAccent)),
+                                const SizedBox(height: 4),
+                                Text('Unit: ${formatKsh(item.product.priceKsh)}', style: AppTypography.bodySmall()),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -807,7 +814,7 @@ class _FavouriteProductCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => onNavigate('/shop?product=${product.id}'),
+            onTap: () => onNavigate(AppRouter.productRoute(product)),
             child: AspectRatio(
               aspectRatio: 4 / 3,
               child: Image.asset(
@@ -994,7 +1001,7 @@ class _OrdersTabState extends State<_OrdersTab> {
               onAction: pending.isNotEmpty ? widget.onSwitchToPending : () => widget.onNavigate('/shop'),
             )
           else
-            ...completed.map((o) => _OrderCard(order: o)),
+            ...completed.map((o) => _OrderCard(order: o, onNavigate: widget.onNavigate)),
         ],
       );
     }
@@ -1031,6 +1038,7 @@ class _OrdersTabState extends State<_OrdersTab> {
         else
           ...pending.map((o) => _OrderCard(
                 order: o,
+                onNavigate: widget.onNavigate,
                 onCancel: o.status == OrderStatus.pendingPayment ? () => _cancel(o.id) : null,
               )),
       ],
@@ -1040,9 +1048,10 @@ class _OrdersTabState extends State<_OrdersTab> {
 
 class _OrderCard extends StatelessWidget {
   final CustomerOrder order;
+  final Function(String) onNavigate;
   final VoidCallback? onCancel;
 
-  const _OrderCard({required this.order, this.onCancel});
+  const _OrderCard({required this.order, required this.onNavigate, this.onCancel});
 
   @override
   Widget build(BuildContext context) {
@@ -1099,9 +1108,15 @@ class _OrderCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text(
-                        '${line.quantity} × ${line.title} — ${line.subtitle} (${line.productCode})',
-                        style: AppTypography.bodyMedium(color: DesignTokens.textPrimary),
+                      child: InkWell(
+                        onTap: () => onNavigate(AppRouter.productRouteById(line.productId)),
+                        child: Text(
+                          '${line.quantity} × ${line.title} — ${line.subtitle} (${line.productCode})',
+                          style: AppTypography.bodyMedium(color: DesignTokens.textPrimary).copyWith(
+                            decoration: TextDecoration.underline,
+                            decorationColor: DesignTokens.borderLight,
+                          ),
+                        ),
                       ),
                     ),
                     Text(
@@ -1279,7 +1294,7 @@ class _MyReviewsTabState extends State<_MyReviewsTab> {
                   children: [
                     if (product != null)
                       TextButton(
-                        onPressed: () => widget.onNavigate('/shop?product=${product.id}'),
+                        onPressed: () => widget.onNavigate(AppRouter.productRoute(product)),
                         child: Text('EDIT ON PRODUCT PAGE',
                             style:
                                 AppTypography.labelUppercase(color: DesignTokens.oliveAccent).copyWith(fontSize: 10)),

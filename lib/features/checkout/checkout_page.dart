@@ -715,7 +715,7 @@ class _PendingOrderConfirmation extends StatelessWidget {
                 SageButton(
                   text: 'VIEW PENDING ORDERS',
                   style: SageButtonStyle.primary,
-                  onTap: () => onNavigate('/account?tab=pending'),
+                  onTap: () => onNavigate('/account/pending'),
                 ),
                 SageButton(
                   text: 'CONTINUE SHOPPING',
@@ -820,7 +820,7 @@ class _TumaPaymentStatusView extends StatelessWidget {
                   SageButton(
                     text: 'VIEW PURCHASE HISTORY',
                     style: SageButtonStyle.primary,
-                    onTap: () => onNavigate('/account?tab=history'),
+                    onTap: () => onNavigate('/account/history'),
                   )
                 else ...[
                   SageButton(
@@ -836,7 +836,7 @@ class _TumaPaymentStatusView extends StatelessWidget {
                   SageButton(
                     text: 'VIEW PENDING ORDERS',
                     style: SageButtonStyle.primary,
-                    onTap: () => onNavigate('/account?tab=pending'),
+                    onTap: () => onNavigate('/account/pending'),
                   ),
                 ],
               ],

@@ -90,7 +90,7 @@ void main() {
       await _pump(tester, AccountPage(onNavigate: (r) => navigated = r, initialTab: 'favourites'));
       expect(find.text('Sign in to continue'), findsOneWidget);
       await tester.tap(find.text('SIGN IN'));
-      expect(navigated, '/sign-in?return=${Uri.encodeComponent('/account?tab=favourites')}');
+      expect(navigated, '/sign-in?return=${Uri.encodeComponent('/account/favourites')}');
     });
 
     testWidgets('sign-in page fits on mobile', (tester) async {

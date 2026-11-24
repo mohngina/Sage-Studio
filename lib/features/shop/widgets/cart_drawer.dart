@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/routing/app_router.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/widgets/thin_rule.dart';
@@ -104,27 +105,39 @@ class CartDrawer extends StatelessWidget {
                             final item = cart.items[index];
                             return Row(
                               children: [
-                                ClipRRect(
-                                  child: item.product.mainImage.startsWith('http')
-                                      ? Image.network(
-                                          item.product.mainImage,
-                                          width: 70,
-                                          height: 85,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : Image.asset(
-                                          item.product.mainImage,
-                                          width: 70,
-                                          height: 85,
-                                          fit: BoxFit.cover,
-                                        ),
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.of(context).pop();
+                                    onNavigate?.call(AppRouter.productRoute(item.product));
+                                  },
+                                  child: ClipRRect(
+                                    child: item.product.mainImage.startsWith('http')
+                                        ? Image.network(
+                                            item.product.mainImage,
+                                            width: 70,
+                                            height: 85,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : Image.asset(
+                                            item.product.mainImage,
+                                            width: 70,
+                                            height: 85,
+                                            fit: BoxFit.cover,
+                                          ),
+                                  ),
                                 ),
                                 const SizedBox(width: DesignTokens.md),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(item.product.title, style: AppTypography.cardTitle()),
+                                      GestureDetector(
+                                        onTap: () {
+                                          Navigator.of(context).pop();
+                                          onNavigate?.call(AppRouter.productRoute(item.product));
+                                        },
+                                        child: Text(item.product.title, style: AppTypography.cardTitle()),
+                                      ),
                                       const SizedBox(height: 2),
                                       Text(item.product.subtitle,
                                           style: AppTypography.bodySmall(color: DesignTokens.oliveAccent)),

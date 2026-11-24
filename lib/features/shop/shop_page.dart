@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/routing/app_router.dart';
 import '../../core/theme/design_tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/thin_rule.dart';
@@ -16,12 +17,14 @@ class ShopPage extends StatefulWidget {
   final Function(String) onNavigate;
   final String? initialClanName;
   final String? initialProductId;
+  final String? initialOption;
 
   const ShopPage({
     super.key,
     required this.onNavigate,
     this.initialClanName,
     this.initialProductId,
+    this.initialOption,
   });
 
   @override
@@ -43,45 +46,45 @@ class _ShopPageState extends State<ShopPage> {
   @override
   void didUpdateWidget(covariant ShopPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialClanName != widget.initialClanName || oldWidget.initialProductId != widget.initialProductId) {
+    if (oldWidget.initialClanName != widget.initialClanName ||
+        oldWidget.initialProductId != widget.initialProductId ||
+        oldWidget.initialOption != widget.initialOption) {
       _applyInitialClan();
     }
   }
 
   void _applyInitialClan() {
-    final pid = widget.initialProductId?.trim().toLowerCase();
-    if (pid != null && pid.isNotEmpty) {
-      for (final p in ProductData.sampleProducts) {
-        if (p.id.toLowerCase() == pid) {
-          _selectedProductForDetail = p;
-          return;
-        }
+    final product = AppRouter.findProduct(widget.initialProductId);
+    if (product != null) {
+      _selectedProductForDetail = product;
+      _selectedClan = AppRouter.findClan(product.clan);
+      if (widget.initialOption != null && widget.initialOption!.isNotEmpty) {
+        _selectedOptionForDetail = widget.initialOption!;
       }
-    }
-    final target = widget.initialClanName?.trim().toLowerCase();
-    if (target == null || target.isEmpty) {
-      _selectedClan = null;
       return;
     }
-    for (final clan in ProductData.sampleClans) {
-      if (clan.name.toLowerCase() == target || clan.id.toLowerCase() == target) {
-        _selectedClan = clan;
-        _selectedProductForDetail = null;
-        return;
-      }
-    }
+    _selectedProductForDetail = null;
+    _selectedClan = AppRouter.findClan(widget.initialClanName);
   }
 
   @override
   Widget build(BuildContext context) {
     // 1. Detailed View when a product is selected
     if (_selectedProductForDetail != null) {
+      final currentProduct = _selectedProductForDetail!;
       return ProductDetailPage(
-        product: _selectedProductForDetail!,
+        product: currentProduct,
         initialOption: _selectedOptionForDetail,
         onNavigate: (route) {
-          if (route == '/shop' || route == 'back') {
+          if (route == 'back') {
             setState(() => _selectedProductForDetail = null);
+            widget.onNavigate(AppRouter.clanRouteForProduct(currentProduct));
+          } else if (route == '/shop') {
+            setState(() {
+              _selectedProductForDetail = null;
+              _selectedClan = null;
+            });
+            widget.onNavigate('/shop');
           } else {
             widget.onNavigate(route);
           }
@@ -91,6 +94,7 @@ class _ShopPageState extends State<ShopPage> {
             _selectedProductForDetail = product;
             _selectedOptionForDetail = 'Cover & Insert';
           });
+          widget.onNavigate(AppRouter.productRoute(product));
         },
       );
     }
@@ -248,10 +252,13 @@ class _ShopPageState extends State<ShopPage> {
                         SageButton(
                           text: 'EXPLORE THE BOSIBORI CLAN (SOFAS)',
                           style: SageButtonStyle.burntOrange,
-                          onTap: () => setState(() {
-                            _selectedCategory = 'SOFAS';
-                            _selectedClan = ProductData.bosiboriClan;
-                          }),
+                          onTap: () {
+                            setState(() {
+                              _selectedCategory = 'SOFAS';
+                              _selectedClan = ProductData.bosiboriClan;
+                            });
+                            widget.onNavigate(AppRouter.clanRoute(ProductData.bosiboriClan));
+                          },
                         ),
                       ],
                     ),
@@ -290,7 +297,10 @@ class _ShopPageState extends State<ShopPage> {
                         ? _ClanCategoryCard(
                             clan: rowItems[j],
                             screenWidth: screenWidth,
-                            onTap: () => setState(() => _selectedClan = rowItems[j]),
+                            onTap: () {
+                              setState(() => _selectedClan = rowItems[j]);
+                              widget.onNavigate(AppRouter.clanRoute(rowItems[j]));
+                            },
                           )
                         : const SizedBox.shrink(),
                   ),
@@ -339,7 +349,10 @@ class _ShopPageState extends State<ShopPage> {
                     SageButton(
                       text: '← BACK TO CATALOGUE',
                       style: SageButtonStyle.textLink,
-                      onTap: () => setState(() => _selectedClan = null),
+                      onTap: () {
+                        setState(() => _selectedClan = null);
+                        widget.onNavigate('/shop');
+                      },
                     ),
                     TextButton.icon(
                       icon: const Icon(Icons.info_outline, size: 16, color: DesignTokens.oliveAccent),
@@ -419,10 +432,13 @@ class _ShopPageState extends State<ShopPage> {
                             screenWidth: screenWidth,
                             columns: columns,
                             onNavigate: widget.onNavigate,
-                            onTapWithOption: (selectedOpt) => setState(() {
-                              _selectedProductForDetail = rowItems[j];
-                              _selectedOptionForDetail = selectedOpt;
-                            }),
+                            onTapWithOption: (selectedOpt) {
+                              setState(() {
+                                _selectedProductForDetail = rowItems[j];
+                                _selectedOptionForDetail = selectedOpt;
+                              });
+                              widget.onNavigate(AppRouter.productRoute(rowItems[j], option: selectedOpt));
+                            },
                           )
                         : const SizedBox.shrink(),
                   ),

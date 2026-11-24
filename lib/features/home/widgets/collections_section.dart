@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/routing/app_router.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/responsive/breakpoints.dart';
@@ -89,7 +90,7 @@ class _ProductCardLarge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => onNavigate('/shop?clan=${Uri.encodeComponent(product.clan)}'),
+      onTap: () => onNavigate(AppRouter.clanRouteForProduct(product)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

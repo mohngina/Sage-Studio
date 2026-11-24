@@ -193,7 +193,10 @@ class _NavLinkState extends State<_NavLink> {
   @override
   Widget build(BuildContext context) {
     final isActive = widget.activeRoute == widget.route ||
-        (widget.route != '/' && widget.activeRoute.startsWith('${widget.route}?'));
+        (widget.route == '/projects' && widget.activeRoute == '/gallery') ||
+        (widget.route != '/' &&
+            (widget.activeRoute.startsWith('${widget.route}/') ||
+                widget.activeRoute.startsWith('${widget.route}?')));
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/responsive/breakpoints.dart';
+import '../../../core/widgets/social_links_row.dart';
 import '../../../core/widgets/thin_rule.dart';
 
 class FooterSection extends StatelessWidget {
@@ -105,7 +106,12 @@ class FooterSection extends StatelessWidget {
                 'Sage Studio',
                 style: AppTypography.heroTitle(color: Colors.white).copyWith(fontSize: 32),
               ),
-              const SizedBox(height: DesignTokens.sm),
+              const SizedBox(height: DesignTokens.md),
+              const SocialLinksRow(
+                isDark: true,
+                alignment: WrapAlignment.center,
+              ),
+              const SizedBox(height: DesignTokens.lg),
               Text(
                 '© 2025 SAGE STUDIO • KAMAKIS, RUIRU • CRAFTED IN KENYA',
                 style: AppTypography.labelUppercase(color: DesignTokens.textMuted),

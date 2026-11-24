@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
@@ -13,10 +12,11 @@ class SageStudioApp extends StatefulWidget {
   State<SageStudioApp> createState() => _SageStudioAppState();
 }
 
-class _SageStudioAppState extends State<SageStudioApp> {
+class _SageStudioAppState extends State<SageStudioApp> with WidgetsBindingObserver {
   String _currentRoute = '/';
 
   void _navigateTo(String route) {
+    if (_currentRoute == route) return;
     setState(() {
       _currentRoute = route;
     });
@@ -26,19 +26,23 @@ class _SageStudioAppState extends State<SageStudioApp> {
   @override
   void initState() {
     super.initState();
-    if (kIsWeb) {
-      final initialPath = Uri.base.path;
-      if (initialPath.isNotEmpty &&
-          initialPath != '/' &&
-          !initialPath.endsWith('.html')) {
-        _currentRoute = Uri.base.hasQuery
-            ? '$initialPath?${Uri.base.query}'
-            : initialPath;
-      }
+    WidgetsBinding.instance.addObserver(this);
+    final initial = WidgetsBinding.instance.platformDispatcher.defaultRouteName;
+    if (initial.isNotEmpty && initial != '/') {
+      _currentRoute = initial;
     }
     // Auth events (OAuth return, password-recovery links) can request a route.
     AuthService.instance.pendingNavigation.addListener(_onPendingNavigation);
     _onPendingNavigation();
+  }
+
+  @override
+  Future<bool> didPushRouteInformation(RouteInformation routeInformation) async {
+    final next = routeInformation.uri.toString();
+    if (next.isNotEmpty && next != _currentRoute && mounted) {
+      setState(() => _currentRoute = next);
+    }
+    return true;
   }
 
   void _onPendingNavigation() {
@@ -50,6 +54,7 @@ class _SageStudioAppState extends State<SageStudioApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     AuthService.instance.pendingNavigation.removeListener(_onPendingNavigation);
     super.dispose();
   }
@@ -57,7 +62,7 @@ class _SageStudioAppState extends State<SageStudioApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Sage Studio — Interior Design Atelier',
+      title: 'Sage Studio — Editorial Luxury Ceramic Practice',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
       home: Scaffold(

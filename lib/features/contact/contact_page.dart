@@ -3,6 +3,7 @@ import '../../core/theme/design_tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/responsive/breakpoints.dart';
 import '../../core/responsive/responsive_layout.dart';
+import '../../core/widgets/social_links_row.dart';
 import '../../core/widgets/thin_rule.dart';
 import '../../core/widgets/sage_button.dart';
 import '../../core/services/enquiry_docx_service.dart';
@@ -184,6 +185,8 @@ class _ContactPageState extends State<ContactPage> {
           secondary: 'By private appointment only',
           note: 'Tailored 1-on-1 spatial & material review',
         ),
+        const SizedBox(height: DesignTokens.lg),
+        _buildSocialConnectCard(),
         const SizedBox(height: DesignTokens.xl),
         Container(
           width: double.infinity,
@@ -218,6 +221,40 @@ class _ContactPageState extends State<ContactPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSocialConnectCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DesignTokens.lg),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: DesignTokens.borderLight),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'FOLLOW SAGE STUDIO',
+            style: AppTypography.labelUppercase(color: DesignTokens.oliveAccent).copyWith(fontSize: 10),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Explore our latest commissions, studio process and collections.',
+            style: AppTypography.bodySmall(color: DesignTokens.textMuted),
+          ),
+          const SizedBox(height: DesignTokens.md),
+          const SocialLinksRow(),
+        ],
+      ),
     );
   }
 
