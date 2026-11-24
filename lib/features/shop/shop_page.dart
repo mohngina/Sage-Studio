@@ -12,6 +12,7 @@ import 'cart_controller.dart';
 import 'product_detail_page.dart';
 import 'widgets/cart_drawer.dart';
 import 'widgets/favourite_button.dart';
+import '../home/widgets/footer_section.dart';
 
 class ShopPage extends StatefulWidget {
   final Function(String) onNavigate;
@@ -123,18 +124,20 @@ class _ShopPageState extends State<ShopPage> {
     final clanCrossAxisCount = screenWidth < 640 ? 1 : 2;
 
     return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: horizontalPadding,
-          vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
-        ),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
+            ),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 // Page Header
                 Wrap(
                   alignment: WrapAlignment.spaceBetween,
@@ -269,6 +272,10 @@ class _ShopPageState extends State<ShopPage> {
           ),
         ),
       ),
+          const SizedBox(height: DesignTokens.xxl),
+          FooterSection(onNavigate: widget.onNavigate),
+        ],
+      ),
     );
   }
 
@@ -327,18 +334,20 @@ class _ShopPageState extends State<ShopPage> {
     final productColumns = screenWidth < 680 ? 1 : (screenWidth >= 1360 && clan.products.length >= 3 ? 3 : 2);
 
     return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: horizontalPadding,
-          vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
-        ),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
+            ),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 // Breadcrumbs & Back
                 Wrap(
                   alignment: WrapAlignment.spaceBetween,
@@ -403,6 +412,10 @@ class _ShopPageState extends State<ShopPage> {
             ),
           ),
         ),
+      ),
+          const SizedBox(height: DesignTokens.xxl),
+          FooterSection(onNavigate: widget.onNavigate),
+        ],
       ),
     );
   }

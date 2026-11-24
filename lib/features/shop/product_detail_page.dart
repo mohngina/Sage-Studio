@@ -13,6 +13,7 @@ import 'cart_controller.dart';
 import 'widgets/cart_drawer.dart';
 import 'widgets/favourite_button.dart';
 import 'widgets/product_reviews_section.dart';
+import '../home/widgets/footer_section.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Product product;
@@ -55,20 +56,22 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         ProductData.sampleProducts.where((p) => p.id != product.id && p.clan == product.clan).toList();
 
     return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: isCompact
-              ? DesignTokens.mobilePadding
-              : (screenWidth < 1100 ? DesignTokens.xl : DesignTokens.desktopPadding),
-          vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
-        ),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompact
+                  ? DesignTokens.mobilePadding
+                  : (screenWidth < 1100 ? DesignTokens.xl : DesignTokens.desktopPadding),
+              vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
+            ),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 // Top Navigation Row
                 Wrap(
                   alignment: WrapAlignment.spaceBetween,
@@ -165,6 +168,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             ),
           ),
         ),
+      ),
+          const SizedBox(height: DesignTokens.xxl),
+          FooterSection(onNavigate: widget.onNavigate),
+        ],
       ),
     );
   }

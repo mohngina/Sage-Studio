@@ -8,6 +8,7 @@ import '../../core/widgets/sage_button.dart';
 import '../../core/widgets/hover_image.dart';
 import '../../data/content_data.dart';
 import '../../models/service_model.dart';
+import '../home/widgets/footer_section.dart';
 
 class ServicesPage extends StatelessWidget {
   final Function(String) onNavigate;
@@ -20,40 +21,46 @@ class ServicesPage extends StatelessWidget {
     const services = ContentData.services;
 
     return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: isMobile ? DesignTokens.mobilePadding : DesignTokens.desktopPadding,
-          vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
-        ),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Services', style: AppTypography.heroTitle().copyWith(fontSize: isMobile ? 40 : 64)),
-                const SizedBox(height: DesignTokens.sm),
-                Text('STUDIO COMMISSIONS, CURATION & CREATIVE DIRECTION', style: AppTypography.labelUppercase()),
-                const SizedBox(height: DesignTokens.xl),
-                const ThinRule(),
-                const SizedBox(height: DesignTokens.xxxl),
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: services.length,
-                  separatorBuilder: (_, __) => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: DesignTokens.xxxl),
-                    child: ThinRule(),
-                  ),
-                  itemBuilder: (context, index) {
-                    return _ServiceEditorialRow(service: services[index], onNavigate: onNavigate);
-                  },
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? DesignTokens.mobilePadding : DesignTokens.desktopPadding,
+              vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
+            ),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Services', style: AppTypography.heroTitle().copyWith(fontSize: isMobile ? 40 : 64)),
+                    const SizedBox(height: DesignTokens.sm),
+                    Text('STUDIO COMMISSIONS, CURATION & CREATIVE DIRECTION', style: AppTypography.labelUppercase()),
+                    const SizedBox(height: DesignTokens.xl),
+                    const ThinRule(),
+                    const SizedBox(height: DesignTokens.xxxl),
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: services.length,
+                      separatorBuilder: (_, __) => const Padding(
+                        padding: EdgeInsets.symmetric(vertical: DesignTokens.xxxl),
+                        child: ThinRule(),
+                      ),
+                      itemBuilder: (context, index) {
+                        return _ServiceEditorialRow(service: services[index], onNavigate: onNavigate);
+                      },
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+          const SizedBox(height: DesignTokens.xxl),
+          FooterSection(onNavigate: onNavigate),
+        ],
       ),
     );
   }

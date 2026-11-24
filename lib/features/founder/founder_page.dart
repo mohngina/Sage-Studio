@@ -7,6 +7,7 @@ import '../../core/widgets/signature_watermark.dart';
 import '../../core/widgets/thin_rule.dart';
 import '../../core/widgets/sage_button.dart';
 import '../../data/content_data.dart';
+import '../home/widgets/footer_section.dart';
 
 class FounderPage extends StatefulWidget {
   final Function(String) onNavigate;
@@ -24,17 +25,19 @@ class _FounderPageState extends State<FounderPage> {
     final isMobile = Breakpoints.isMobile(context);
 
     return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: isMobile ? DesignTokens.mobilePadding : DesignTokens.desktopPadding,
-          vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
-        ),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
-            child: Stack(
-              children: [
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? DesignTokens.mobilePadding : DesignTokens.desktopPadding,
+              vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
+            ),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
+                child: Stack(
+                  children: [
                 const Positioned(
                   right: 0,
                   bottom: 40,
@@ -87,6 +90,10 @@ class _FounderPageState extends State<FounderPage> {
             ),
           ),
         ),
+      ),
+          const SizedBox(height: DesignTokens.xxl),
+          FooterSection(onNavigate: widget.onNavigate),
+        ],
       ),
     );
   }

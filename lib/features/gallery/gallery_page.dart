@@ -8,6 +8,7 @@ import '../../core/widgets/thin_rule.dart';
 import '../../core/widgets/image_frame.dart';
 import '../../data/gallery_data.dart';
 import '../../models/gallery_model.dart';
+import '../home/widgets/footer_section.dart';
 
 class GalleryPage extends StatelessWidget {
   final Function(String) onNavigate;
@@ -71,17 +72,19 @@ class GalleryPage extends StatelessWidget {
     final items = GalleryData.items;
 
     return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: isMobile ? DesignTokens.mobilePadding : DesignTokens.desktopPadding,
-          vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
-        ),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
-            child: Stack(
-              children: [
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? DesignTokens.mobilePadding : DesignTokens.desktopPadding,
+              vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
+            ),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
+                child: Stack(
+                  children: [
                 const Positioned(
                   right: 0,
                   bottom: 0,
@@ -137,6 +140,10 @@ class GalleryPage extends StatelessWidget {
             ),
           ),
         ),
+      ),
+          const SizedBox(height: DesignTokens.xxl),
+          FooterSection(onNavigate: onNavigate),
+        ],
       ),
     );
   }

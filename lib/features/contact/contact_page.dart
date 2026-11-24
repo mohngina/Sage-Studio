@@ -7,6 +7,7 @@ import '../../core/widgets/social_links_row.dart';
 import '../../core/widgets/thin_rule.dart';
 import '../../core/widgets/sage_button.dart';
 import '../../core/services/enquiry_docx_service.dart';
+import '../home/widgets/footer_section.dart';
 
 class ContactPage extends StatefulWidget {
   final Function(String) onNavigate;
@@ -91,47 +92,53 @@ class _ContactPageState extends State<ContactPage> {
     final isMobile = Breakpoints.isMobile(context);
 
     return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: isMobile ? DesignTokens.mobilePadding : DesignTokens.desktopPadding,
-          vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
-        ),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Contacts", style: AppTypography.heroTitle().copyWith(fontSize: isMobile ? 40 : 64)),
-                const SizedBox(height: DesignTokens.sm),
-                Text("LET'S CREATE SOMETHING MEANINGFUL",
-                    style: AppTypography.labelUppercase(color: DesignTokens.burntOrange)),
-                const SizedBox(height: DesignTokens.xl),
-                const ThinRule(),
-                const SizedBox(height: DesignTokens.xxxl),
-                ResponsiveLayout(
-                  mobile: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildContactInfoBlock(),
-                      const SizedBox(height: DesignTokens.xxl),
-                      _buildContactFormBlock(),
-                    ],
-                  ),
-                  desktop: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 5, child: _buildContactInfoBlock()),
-                      const SizedBox(width: DesignTokens.xxxl),
-                      Expanded(flex: 7, child: _buildContactFormBlock()),
-                    ],
-                  ),
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? DesignTokens.mobilePadding : DesignTokens.desktopPadding,
+              vertical: isMobile ? DesignTokens.xl : DesignTokens.xxl,
+            ),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: DesignTokens.maxContentWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Contacts", style: AppTypography.heroTitle().copyWith(fontSize: isMobile ? 40 : 64)),
+                    const SizedBox(height: DesignTokens.sm),
+                    Text("LET'S CREATE SOMETHING MEANINGFUL",
+                        style: AppTypography.labelUppercase(color: DesignTokens.burntOrange)),
+                    const SizedBox(height: DesignTokens.xl),
+                    const ThinRule(),
+                    const SizedBox(height: DesignTokens.xxxl),
+                    ResponsiveLayout(
+                      mobile: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildContactInfoBlock(),
+                          const SizedBox(height: DesignTokens.xxl),
+                          _buildContactFormBlock(),
+                        ],
+                      ),
+                      desktop: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 5, child: _buildContactInfoBlock()),
+                          const SizedBox(width: DesignTokens.xxxl),
+                          Expanded(flex: 7, child: _buildContactFormBlock()),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+          const SizedBox(height: DesignTokens.xxl),
+          FooterSection(onNavigate: widget.onNavigate),
+        ],
       ),
     );
   }
