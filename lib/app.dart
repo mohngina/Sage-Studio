@@ -57,7 +57,7 @@ class _SageStudioAppState extends State<SageStudioApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Sage Studio — Editorial Luxury Ceramic Practice',
+      title: 'Sage Studio — Interior Design Atelier',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
       home: Scaffold(
