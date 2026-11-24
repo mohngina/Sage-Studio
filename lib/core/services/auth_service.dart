@@ -100,7 +100,8 @@ class AuthService extends ChangeNotifier {
           pendingNavigation.value = route;
         }
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[AuthService.initialise] failed: $e');
       _status = AuthStatus.unconfigured;
       _initError = 'Customer accounts are temporarily unavailable.';
     }

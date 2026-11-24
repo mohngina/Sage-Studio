@@ -250,7 +250,7 @@ class _ContactPageState extends State<ContactPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'FOLLOW SAGE STUDIO',
+            'JOIN US ON',
             style: AppTypography.labelUppercase(color: DesignTokens.oliveAccent).copyWith(fontSize: 10),
           ),
           const SizedBox(height: 6),
