@@ -87,6 +87,21 @@ class _AccountPageState extends State<AccountPage> {
               listenable: AuthService.instance,
               builder: (context, _) {
                 final auth = AuthService.instance;
+                if (auth.status == AuthStatus.initialising) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: DesignTokens.xxxl),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: DesignTokens.oliveAccent,
+                        ),
+                      ),
+                    ),
+                  );
+                }
                 if (!auth.isSignedIn) {
                   return SignInRequiredView(
                     onNavigate: widget.onNavigate,
