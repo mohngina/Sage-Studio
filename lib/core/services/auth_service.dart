@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
+import 'session_local_storage.dart';
 
 enum AuthStatus { unconfigured, initialising, signedOut, signedIn }
 
@@ -76,10 +77,14 @@ class AuthService extends ChangeNotifier {
         alreadyInitialised = true;
       } catch (_) {}
       if (!alreadyInitialised) {
+        final sessionKey = 'sb-${Uri.parse(SupabaseConfig.url).host.split('.').first}-auth-token';
         await Supabase.initialize(
           url: SupabaseConfig.url,
           publishableKey: SupabaseConfig.anonKey,
-          authOptions: const FlutterAuthClientOptions(authFlowType: AuthFlowType.pkce),
+          authOptions: FlutterAuthClientOptions(
+            authFlowType: AuthFlowType.pkce,
+            localStorage: SessionOnlyLocalStorage(persistSessionKey: sessionKey),
+          ),
           debug: false,
         );
       }
@@ -102,8 +107,13 @@ class AuthService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('[AuthService.initialise] failed: $e');
-      _status = AuthStatus.unconfigured;
-      _initError = 'Customer accounts are temporarily unavailable.';
+      if (_clientInitialised) {
+        _user = null;
+        _status = AuthStatus.signedOut;
+      } else {
+        _status = AuthStatus.unconfigured;
+        _initError = 'Customer accounts are temporarily unavailable.';
+      }
     }
     notifyListeners();
   }
