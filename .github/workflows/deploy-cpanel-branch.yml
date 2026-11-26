@@ -31,6 +31,8 @@ jobs:
 
       - name: Prepare deploy artifacts
         run: |
+          sed -i "s|\"main.dart.js\"|\"main.dart.js?v=${GITHUB_SHA}\"|g" build/web/flutter_bootstrap.js
+          sed -i "s|flutter_bootstrap.js|flutter_bootstrap.js?v=${GITHUB_SHA}|g" build/web/index.html
           cp .cpanel.yml build/web/.cpanel.yml
           if [ -f web/.htaccess ] && [ ! -f build/web/.htaccess ]; then
             cp web/.htaccess build/web/.htaccess

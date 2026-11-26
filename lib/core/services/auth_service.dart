@@ -70,6 +70,7 @@ class AuthService extends ChangeNotifier {
       return;
     }
     _status = AuthStatus.initialising;
+    notifyListeners();
     try {
       var alreadyInitialised = false;
       try {
@@ -97,6 +98,7 @@ class AuthService extends ChangeNotifier {
         notifyListeners();
       });
       if (_user != null) {
+        notifyListeners();
         await _runSignInHooks(_user!);
         // If PKCE OAuth exchange completed during Supabase.initialize(), restore
         // any stored post-auth destination (e.g. '/account' or product return route).
