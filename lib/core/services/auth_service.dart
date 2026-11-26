@@ -156,7 +156,7 @@ class AuthService extends ChangeNotifier {
   void addSignInHook(FutureOr<void> Function(User user) hook) => _signInHooks.add(hook);
 
   Future<void> _runSignOutHooks() async {
-    for (final hook in _signOutHooks) {
+    for (final hook in List.of(_signOutHooks)) {
       try {
         await hook();
       } catch (_) {}
@@ -164,7 +164,7 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> _runSignInHooks(User user) async {
-    for (final hook in _signInHooks) {
+    for (final hook in List.of(_signInHooks)) {
       try {
         await hook(user);
       } catch (_) {}

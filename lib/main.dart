@@ -9,9 +9,10 @@ import 'features/shop/favourites_controller.dart';
 Future<void> main() async {
   usePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
-  // Reference FavouritesController before AuthService.initialise() so its
-  // sign-in hook is registered, and ensure customer profile exists on sign-in.
+  // Reference FavouritesController and CartController before AuthService.initialise()
+  // so their sign-in/sign-out hooks are registered upfront.
   FavouritesController.instance;
+  CartController.instance;
   AuthService.instance.addSignInHook((_) => ProfileRepository().fetchOrCreate());
   runApp(const SageStudioApp());
   // Initialise auth & cart after first frame so the UI renders immediately.
